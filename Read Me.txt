@@ -1,0 +1,2 @@
+1. Connect to the internrt
+2. Open the index.html file

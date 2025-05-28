@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Club Details</title>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      color: #2E7D32;
+    }
+
+    h3 {
+      color: #388E3C;
+    }
+
+    ul {
+      list-style: disc;
+      margin-left: 20px;
+    }
+
+    .field {
+      margin-bottom: 15px;
+    }
+
+    #searchInput {
+      margin: 10px 0;
+      padding: 5px;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    #membershipTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    #membershipTable th,
+    #membershipTable td {
+      padding: 8px;
+      text-align: left;
+      border: 1px solid #ccc;
+    }
+
+    #membershipTable th {
+      background-color: #f4f4f4;
+    }
+
+    @media (max-width: 768px) {
+      #membershipTable,
+      #membershipTable thead,
+      #membershipTable tbody,
+      #membershipTable th,
+      #membershipTable td,
+      #membershipTable tr {
+        display: block;
+        width: 100%;
+      }
+
+      #membershipTable thead {
+        display: none;
+      }
+
+      #membershipTable tr {
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        background-color: #fafafa;
+      }
+
+      #membershipTable td {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        border: none;
+        border-bottom: 1px solid #eee;
+      }
+
+      #membershipTable td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        flex-shrink: 0;
+        margin-right: 10px;
+      }
+    }
+  </style>
+
+  <script>
+    // Firebase init
+    const firebaseConfig = {
+      apiKey: "AIzaSyDBk7jj3Wk8tuK9pC53O21VU08OG0",
+      authDomain: "club-management-portal-e0511.firebaseapp.com",
+      projectId: "club-management-portal-e0511",
+      storageBucket: "club-management-portal-e0511.appspot.com",
+      messagingSenderId: "320079517969",
+      appId: "1:320079517969:web:8692bcc4f23591647354b0",
+      measurementId: "G-KPTNGEPEFM"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function getClubSlugFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("club");
+    }
+
+    function loadClubDetails() {
+      const slug = getClubSlugFromURL();
+      if (!slug) {
+        document.getElementById("clubDetails").innerHTML = "<p>Invalid club selected.</p>";
+        return;
+      }
+
+      db.collection("clubs").where("slug", "==", slug).get().then(snapshot => {
+        if (snapshot.empty) {
+          document.getElementById("clubDetails").innerHTML = "<p>Club not found.</p>";
+          return;
+        }
+
+        const data = snapshot.docs[0].data();
+        document.getElementById("clubName").textContent = data.name;
+        document.getElementById("clubDesc").textContent = data.description;
+        document.getElementById("clubAdvisor").textContent = "Advisor: " + data.advisor;
+
+        const activityList = document.getElementById("clubActivities");
+        if (data.activities && data.activities.length) {
+          data.activities.forEach(activity => {
+            const li = document.createElement("li");
+            li.textContent = activity;
+            activityList.appendChild(li);
+          });
+        } else {
+          activityList.innerHTML = "<li>No activities listed.</li>";
+        }
+
+        // Extra info
+        if (data.performances?.length) {
+          const perfHeading = document.createElement("h3");
+          perfHeading.textContent = "Performances:";
+          const perfList = document.createElement("ul");
+          data.performances.forEach(perf => {
+            const li = document.createElement("li");
+            li.textContent = perf;
+            perfList.appendChild(li);
+          });
+          document.getElementById("clubDetails").append(perfHeading, perfList);
+        }
+
+        if (data.instruments?.length) {
+          const instrHeading = document.createElement("h3");
+          instrHeading.textContent = "Instruments:";
+          const instrList = document.createElement("ul");
+          data.instruments.forEach(instr => {
+            const li = document.createElement("li");
+            li.textContent = instr;
+            instrList.appendChild(li);
+          });
+          document.getElementById("clubDetails").append(instrHeading, instrList);
+        }
+      }).catch(error => {
+        console.error("Error loading club details: ", error);
+      });
+    }
+
+    function loadMemberships() {
+      const tbody = document.getElementById('membershipTableBody');
+      tbody.innerHTML = '';
+
+      db.collection("club_memberships").orderBy("club").get().then(snapshot => {
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td data-label="Name">${data.name}</td>
+            <td data-label="UID">${data.uid}</td>
+            <td data-label="Department">${data.department}</td>
+            <td data-label="Gender">${data.gender}</td>
+            <td data-label="Date Joined">${data.date}</td>
+            <td data-label="Club">${data.club}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }).catch(error => {
+        alert("Error loading memberships: " + error.message);
+      });
+    }
+
+    function searchMemberships() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const rows = document.querySelectorAll('#membershipTableBody tr');
+
+      rows.forEach(row => {
+        const match = Array.from(row.cells).some(cell =>
+          cell.textContent.toLowerCase().includes(query)
+        );
+        row.style.display = match ? '' : 'none';
+      });
+    }
+
+    window.onload = loadClubDetails;
+    document.addEventListener('DOMContentLoaded', loadMemberships);
+  </script>
+</head>
+
+<body>
+  <div id="clubDetails">
+    <h1 id="clubName">Loading...</h1>
+    <div class="field">
+      <p id="clubDesc"></p>
+    </div>
+    <div class="field">
+      <p id="clubAdvisor"></p>
+    </div>
+    <h3>Activities:</h3>
+    <ul id="clubActivities"></ul>
+  </div>
+
+  <section id="joinedClubs">
+    <h3>All Club Memberships</h3>
+    <input type="text" id="searchInput" placeholder="Search by club name..." oninput="searchMemberships()" />
+    <div style="overflow-x:auto;">
+      <table id="membershipTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>UID</th>
+            <th>Department</th>
+            <th>Gender</th>
+            <th>Date Joined</th>
+            <th>Club</th>
+          </tr>
+        </thead>
+        <tbody id="membershipTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+</body>
+</html>

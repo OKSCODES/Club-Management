@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1200">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Club & Society Portal</title>
+  <link rel="stylesheet" href="admin.css">
+  
+  <!-- Firebase SDKs (must be loaded first) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <!-- Your external script must be loaded after Firebase -->
+   <style>
+    /* Section Style */
+      #announcements, #events {
+        margin: 30px auto;
+        max-width: 800px;
+        background-color: #ffffff;
+        /* border-left: 6px solid #2e7d32; */
+        padding: 20px 332px;
+        border-radius: 8px;
+        /* box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08); */
+      }
+
+      /* Headings */
+      #announcements h3, #events h3 {
+        color: #2e7d32;
+        margin-bottom: 15px;
+      }
+
+      /* Lists */
+      #announcementList, #eventList {
+        list-style: disc;
+        margin: 10px 0 20px 20px;
+        padding-left: 0;
+      }
+
+      #announcementList li, #eventList li {
+        margin-bottom: 10px;
+        font-size: 16px;
+      }
+
+      /* Forms */
+      #announcementForm, #eventForm {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      #announcementForm input,
+      #eventForm input {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        flex: 1;
+        min-width: 200px;
+      }
+
+      #eventForm input[type="date"] {
+        max-width: 200px;
+      }
+
+      /* Buttons */
+      #announcementForm button,
+      #eventForm button {
+        background-color: #2e7d32;
+        color: white;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+
+      #announcementForm button:hover,
+      #eventForm button:hover {
+        background-color: #1b5e20;
+      }
+   </style>
+<script>
+// Firebase configuration (ensure this matches your firebaseConfig)
+    const firebaseConfig = {
+    apiKey: "AIzaSyDBk7jj3Wk8kMfI8tuK9pC53O21VU08OG0",
+    authDomain: "club-management-portal-e0511.firebaseapp.com",
+    projectId: "club-management-portal-e0511",
+    storageBucket: "club-management-portal-e0511.firebasestorage.app",
+    messagingSenderId: "320079517969",
+    appId: "1:320079517969:web:8692bcc4f23591647354b0",
+    measurementId: "G-KPTNGEPEFM"
+    };
+  firebase.initializeApp(firebaseConfig);
+
+  // Logout function
+  function logout() {
+    firebase.auth().signOut().then(() => {
+      alert("Logged out successfully!");
+      window.location.href = "login.html";
+    }).catch((error) => {
+      alert("Error logging out: " + error.message);
+    });
+  }
+</script>
+  <script src="script.js"></script>
+</head>
+<body>
+  <div class="desktop-container"></div>
+    <header>
+      <nav>
+        <h1>Club & Society Portal</h1>
+        <ul class="nav-menu">
+          <li><a href="#announcements">Announcements</a></li>
+          <li><a href="#events">Events</a></li>
+          <li><a href="#joinedClubs">Clubs</a></li>
+        </ul>
+      </nav>
+    </header>
+      <section class="hero">
+      <h2>Welcome to the Club & Society Management Portal</h2>
+      <p>Manage memberships, stay updated with events, and get involved!</p>
+      <!-- <button onclick="location.href='login.html'">Login</button> -->
+      <!-- <button onclick="location.href='register.html'">Register</button> -->
+      <button onclick="location.href='index.html'">Logout</button>
+       </section>
+
+      <section id="announcements">
+      <h3>Latest Announcements</h3>
+      <ul id="announcementList"></ul>
+
+      <form id="announcementForm">
+        <input type="text" id="announcementInput" placeholder="Enter new announcement" required />
+        <button type="submit">Add Announcement</button>
+      </form>
+      </section>
+
+      <section id="events">
+        <h3>Upcoming Events</h3>
+        <ul id="eventList"></ul>
+
+      <form id="eventForm">
+        <input type="text" id="eventInput" placeholder="Enter new event" required />
+        <input type="date" id="eventDate" required />
+        <button type="submit">Add Event</button>
+      </form>
+      </section>
+    </div>
+    <script>
+      const db = firebase.firestore();
+      const adminUID = "9nkIb2LEcxbAwx9PaFZaUm3hkfw1"; // Replace with your real admin UID
+
+      // Firestore: Add Announcement
+      document.getElementById('announcementForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const input = document.getElementById('announcementInput');
+        const text = input.value.trim();
+        if (text) {
+          db.collection("announcements").add({
+            text,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            input.value = '';
+            loadAnnouncements();
+          }).catch(error => alert("Error: " + error.message));
+        }
+      });
+
+      // Firestore: Add Event
+      document.getElementById('eventForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const text = document.getElementById('eventInput').value.trim();
+        const date = document.getElementById('eventDate').value;
+        if (text && date) {
+          db.collection("events").add({
+            text,
+            date,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            document.getElementById('eventInput').value = '';
+            document.getElementById('eventDate').value = '';
+            loadEvents();
+          }).catch(error => alert("Error: " + error.message));
+        }
+      });
+
+      // Load Announcements
+      function loadAnnouncements() {
+        const list = document.getElementById('announcementList');
+        list.innerHTML = '';
+        db.collection("announcements").orderBy("timestamp", "desc").get().then(snapshot => {
+          snapshot.forEach(doc => {
+            const li = document.createElement('li');
+            li.innerHTML = `📢 ${doc.data().text} <button onclick="deleteAnnouncement('${doc.id}')">Delete</button>`;
+            list.appendChild(li);
+          });
+        });
+      }
+
+      // Load Events
+      function loadEvents() {
+        const list = document.getElementById('eventList');
+        list.innerHTML = '';
+        db.collection("events").orderBy("date", "asc").get().then(snapshot => {
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const formattedDate = new Date(data.date).toLocaleDateString(undefined, {
+              year: 'numeric', month: 'long', day: 'numeric'
+            });
+            const li = document.createElement('li');
+            li.innerHTML = `🎤 ${data.text} – ${formattedDate} <button onclick="deleteEvent('${doc.id}')">Delete</button>`;
+            list.appendChild(li);
+          });
+        });
+      }
+
+      // Delete Announcement
+      function deleteAnnouncement(id) {
+        if (confirm("Delete this announcement?")) {
+          db.collection("announcements").doc(id).delete().then(loadAnnouncements);
+        }
+      }
+
+      // Delete Event
+      function deleteEvent(id) {
+        if (confirm("Delete this event?")) {
+          db.collection("events").doc(id).delete().then(loadEvents);
+        }
+      }
+
+      // Load Club Memberships (admin only)
+      function loadMemberships() {
+        const tbody = document.getElementById('membershipTableBody');
+        tbody.innerHTML = '';
+        db.collection("club_memberships").orderBy("club").get().then(snapshot => {
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${data.name}</td>
+              <td>${data.uid}</td>
+              <td>${data.department}</td>
+              <td>${data.gender}</td>
+              <td>${data.date}</td>
+              <td>${data.club}</td>
+              <td>
+                <button onclick="editMembership('${doc.id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})">Edit</button>
+                <button onclick="deleteMembership('${doc.id}')">Delete</button>
+              </td>`;
+            tbody.appendChild(row);
+          });
+        }).catch(err => alert("Failed to load memberships: " + err.message));
+      }
+
+      // Edit Membership
+      function editMembership(id, data) {
+        const name = prompt("Edit Name:", data.name);
+        const uid = prompt("Edit UID:", data.uid);
+        const department = prompt("Edit Department:", data.department);
+        const gender = prompt("Edit Gender:", data.gender);
+        const date = prompt("Edit Date (YYYY-MM-DD):", data.date);
+        const club = prompt("Edit Club:", data.club);
+
+        if (name && uid && department && gender && date && club) {
+          db.collection("club_memberships").doc(id).update({
+            name, uid, department, gender, date, club
+          }).then(() => {
+            alert("Membership updated!");
+            loadMemberships();
+          }).catch(err => alert("Error: " + err.message));
+        }
+      }
+
+      // Delete Membership
+      function deleteMembership(id) {
+        if (confirm("Delete this membership?")) {
+          db.collection("club_memberships").doc(id).delete().then(() => {
+            alert("Deleted.");
+            loadMemberships();
+          }).catch(err => alert("Error: " + err.message));
+        }
+      }
+
+      // Search Memberships
+      function searchMemberships() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#membershipTableBody tr');
+        rows.forEach(row => {
+          const match = Array.from(row.cells).some(cell =>
+            cell.textContent.toLowerCase().includes(query)
+          );
+          row.style.display = match ? '' : 'none';
+        });
+      }
+
+      // Logout Function
+      function logout() {
+        firebase.auth().signOut().then(() => {
+          alert("Logged out.");
+          window.location.href = "login.html";
+        });
+      }
+
+      // On page load: Check Auth + Role
+      document.addEventListener("DOMContentLoaded", () => {
+        firebase.auth().onAuthStateChanged(async user => {
+          if (!user) {
+            window.location.href = "login.html";
+            return;
+          }
+
+          try {
+            const doc = await db.collection("users").doc(user.uid).get();
+            const role = doc.exists ? doc.data().role : null;
+
+            if (user.uid === adminUID && role === "admin") {
+              document.getElementById('joinedClubs').style.display = '';
+              loadMemberships();
+            } else {
+              document.getElementById('joinedClubs').style.display = 'none';
+              alert("Access denied. Admins only.");
+            }
+
+            loadAnnouncements();
+            loadEvents();
+          } catch (err) {
+            alert("Failed to verify admin: " + err.message);
+          }
+        });
+      });
+    </script>
+  <div class="desktop-container"></div>
+  <section id="joinedClubs">
+    <h3>All Club Memberships</h3>
+    <input type="text" id="searchInput" placeholder="Search by club name..." oninput="searchMemberships()" style="margin: 10px 0; padding: 5px; width: 250px;" />
+    <table border="1" id="membershipTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>UID</th>
+          <th>Department</th>
+          <th>Gender</th>
+          <th>Date Joined</th>
+          <th>Club</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="membershipTableBody">
+        <!-- Filled dynamically -->
+      </tbody>
+    </table>
+  </section>
+  <footer>
+    <p>&copy; 2025 Club & Society Portal. All rights reserved.</p>
+  </footer>
+  </div>
+</body>
+</html>
